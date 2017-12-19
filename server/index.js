@@ -1,55 +1,32 @@
 const express = require('express');
+const mongoose = require('mongoose');
+const keys = require('./config/keys');
+const cookieSession = require('cookie-session');
 const passport = require('passport');
-const GoogleStrategy = require('passport-google-oauth20').Strategy;
-const keys = require("./config/keys");
-const app = express();
+
+require('./models/User');//don't need to assign to a variable because no direct calls
+require('./services/passport');
 
 const PORT = process.env.PORT || 5000;
 
-/*
-	passport.use() creates generic authenticator strategy 
-	In this case, use google's oauth strategy
-	Create new GoogleStrategy() 
-		with information:
-			- googleClientID
-			- googleClientSecret
-			- callbackURL = return url after authentication
-		with configurations:
-			-  
-*/
-passport.use(
-	new GoogleStrategy(
-		{
-			clientID: keys.googleClientID,
-			clientSecret: keys.googleClientSecret,
-			callbackURL: '/auth/google/callback'
-		}, 
-		(accessToken, refreshToken, profile, done) => { 
-			//runs when user gets sent back to server
-			//
-			console.log("accessToken: " + accessToken);
-			console.log("refreshToken: " + refreshToken);
-			console.log("profile: " + JSON.stringify(profile));
-		}
-	)
-); 
+//connects to mongodb database
+mongoose.connect(keys.mongoURI, {useMongoClient: true,});
+mongoose.Promise = global.Promise;
 
-/* 
-	Route handler for logging in to authenticate
-*/
-app.get(
-	'/auth/google', 
-	passport.authenticate('google', {
-		scope: ['profile', 'email']
+const app = express();
+
+//tell express it needs to make use of cookies
+app.use(
+	cookieSession({
+		maxAge: 30 * 24 * 60 * 60 *1000, //how long cookie can exist in browser - 30 days
+		keys: [keys.cookieKey]//to encrypt cookie
 	})
 );
 
-/*
-	Route handler for callback (after use logs in) to authenticate
-*/
-app.get(
-	'/auth/google/callback', 
-	passport.authenticate('google')
-);	
+//tell passport to use cookies to handle auth
+app.use(passport.initialize());
+app.use(passport.session());
+
+require('./routes/authRoutes')(app);
 
 app.listen(PORT);
