@@ -7,10 +7,12 @@ const keys = require("../config/keys");
 const User = mongoose.model('users');
 
 passport.serializeUser((user, done) => {
+	// console.log("passport.serializeUser()");
 	done(null, user.id); //callback to turn user into id to put into cookie
 });
 
 passport.deserializeUser((id, done) => {
+	// console.log("passport.deserializeUser()");
 	User.findById(id) //after we turned id back to user
 		.then(user => {
 			done(null, user);
@@ -36,27 +38,20 @@ passport.use(
 			callbackURL: '/auth/google/callback',
 			proxy:true
 		}, 
-		(accessToken, refreshToken, profile, done) => { 
+		async (accessToken, refreshToken, profile, done) => { 
 			//runs when user gets sent back to server
 
 			//check/query to see if user already exists - asynchronous/returns a promise
-			User.findOne({googleId: profile.id})
-				.then((existingUser) => {
-					if (existingUser) {
-						//already have record with profile ID
-						//tell passport we are DONE authenticating
-						done(null, existingUser);//null: no errors happened, and send existingUser
-					} else {
-						//don't have user id - make new record
-						//create new user with retrieved information
-						new User({
-							googleId:profile.id
-						})
-							.save()//save it to the mongodb databse
-							.then(user=> done(null, user)); //return that new user was saved
-					}
-				});
-			
+			const existingUser = await User.findOne({googleId: profile.id});
+			if (existingUser) { //user exists
+				// console.log("passport.userExists()");
+				//tell passport we are DONE authenticating
+				return done(null, existingUser);//null: no errors happened, and send existingUser
+			}
+			// console.log("passport.userDoesNotExist()");
+			// user does NOT exist - create new user
+			const user = await new User({ googleId:profile.id }).save();
+			done(null, user);	//save it to the mongodb database
 		}
 	)
 ); 

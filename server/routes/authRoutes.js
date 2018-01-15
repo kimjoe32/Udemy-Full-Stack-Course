@@ -1,4 +1,5 @@
 const passport = require('passport');
+
 module.exports = app => {
 	/* 
 		Route handler for logging in to authenticate
@@ -15,13 +16,22 @@ module.exports = app => {
 	*/
 	app.get(
 		'/auth/google/callback', 
-		passport.authenticate('google')
+		passport.authenticate('google'), //passes on handler to below
+		(req, res) => {
+			// console.log("get: callback");
+			/*
+				After user auths with google, reroute/enter the application
+			*/
+			res.redirect('/surveys');
+		}
 	);	
 
 	/*
 		Test if someone has logged in + authenticated, can get access to user
+		If not, returns some null object
 	*/	
 	app.get('/api/current_user', (req, res) => {
+		// console.log("get: current_user");
 		res.send(req.user);
 	});
 
@@ -29,7 +39,8 @@ module.exports = app => {
 		For logging out
 	*/
 	app.get('/api/logout', (req, res) =>{
+		// console.log("get; api/logout");
 		req.logout();
-		res.send(req.user); //proves to user they are no longer signed in
+		res.redirect('/');
 	});
 }

@@ -3,17 +3,19 @@ const mongoose = require('mongoose');
 const keys = require('./config/keys');
 const cookieSession = require('cookie-session');
 const passport = require('passport');
+const bodyParser= require('body-parser');
 
 require('./models/User');//don't need to assign to a variable because no direct calls
 require('./services/passport');
-
-const PORT = process.env.PORT || 5000;
 
 //connects to mongodb database
 mongoose.connect(keys.mongoURI, {useMongoClient: true,});
 mongoose.Promise = global.Promise;
 
 const app = express();
+
+//for parsing bodies - when a req comes in, parse it and assign to req.body
+app.use(bodyParser.json());
 
 //tell express it needs to make use of cookies
 app.use(
@@ -27,6 +29,30 @@ app.use(
 app.use(passport.initialize());
 app.use(passport.session());
 
+/*
+	middlewares - every packet is inspected and possibly modified
+	    - authRoutes - for authentication
+	    - billingRoutes - for billing
+*/
 require('./routes/authRoutes')(app);
+require('./routes/billingRoutes')(app);
 
+
+/* 
+	Only runs in heroku production
+*/
+if (process.env.NODE_ENV === 'production') {
+	// make sure express will serve production assets
+	// like main.js file, or main.css file
+	app.use(express.static('client/build'));
+
+	// express will serve index.html file if it doesn't recognize route
+	// catchall case - if all previous attempts have failed
+	const path = require('path');
+	app.get('*', (req, res) => {
+		res.sendFile(path.resolve(__dirname, 'client', 'build', 'index.html'));
+	});
+}
+
+const PORT = process.env.PORT || 5000;
 app.listen(PORT);
