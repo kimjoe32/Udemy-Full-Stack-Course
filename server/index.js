@@ -27,7 +27,7 @@ app.use(
 
 //tell passport to use cookies to handle auth
 app.use(passport.initialize());
-app.use(passport.session()); 
+app.use(passport.session());
 
 /*
 	middlewares - every packet is inspected and possibly modified
