@@ -6,6 +6,7 @@ const passport = require('passport');
 const bodyParser= require('body-parser');
 
 require('./models/User');//don't need to assign to a variable because no direct calls
+require('./models/Survey');
 require('./services/passport');
 
 //connects to mongodb database
@@ -36,7 +37,7 @@ app.use(passport.session());
 */
 require('./routes/authRoutes')(app);
 require('./routes/billingRoutes')(app);
-
+require('./routes/surveyRoutes')(app);
 
 /* 
 	Only runs in heroku production
