@@ -8,6 +8,7 @@ import { reduxForm, Field }from 'redux-form';
 import { Link } from 'react-router-dom';
 import SurveyField from './SurveyField';
 import validateEmails from '../../utils/validateEmails';
+import formFields from './formFields';
 /*
 	For creating a new survey, and its fields
 	For user to add input
@@ -16,19 +17,12 @@ import validateEmails from '../../utils/validateEmails';
 		- when user submits, the function we pass is run on the form
 	- Field will pass on label="Survey Title" to {SurveyField} component
 */
-
-const FIELDS = [
-	{label: "Survey Title", name: "title" }, //noValueError: "You must provide a title"
-	{label: "Subject Line", name: "subject" },
-	{label: "Email Body", name: "body" },
-	{label: "Recipient List", name: "emails"}
-];
 class SurveyForm extends Component {
 	/*
 		Returns a div
 	*/
 	renderFields() {
-		return _.map(FIELDS, ({label, name}) => {
+		return _.map(formFields, ({label, name}) => {
 			return <Field key={name} 
 							component={SurveyField} 
 							type="text" 
@@ -40,7 +34,7 @@ class SurveyForm extends Component {
 	render() {
 		return (
 			<div>
-				<form onSubmit={this.props.handleSubmit(values=> console.log(values))}>
+				<form onSubmit={this.props.handleSubmit(this.props.onSurveySubmit)}>
 					{this.renderFields()}
 					<Link to="/surveys" className="red btn-flat white-text">Cancel</Link>
 					<button type="submit" className="teal btn-flat right white-text">
@@ -57,10 +51,10 @@ function validate(values) {
 	const errors = {};
 
 	// check list of emails is valid
-	errors.emails = validateEmails(values.emails || '');
+	errors.recipients = validateEmails(values.recipients || '');
 
 	// If no input title (blank) given
-	_.each(FIELDS, ({ name }) => {
+	_.each(formFields, ({ name }) => {
 		if (!values[name]) {
 			errors[name] = '*You must provide a value'
 		}
@@ -78,5 +72,6 @@ function validate(values) {
 */
 export default reduxForm({
 	validate,
-	form: 'surveyForm'
+	form: 'surveyForm',
+	destroyOnUnmount: false
 })(SurveyForm);

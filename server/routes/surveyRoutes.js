@@ -1,3 +1,6 @@
+const _ = require('lodash');
+const Path = require('path-parser');
+const { URL } = require('url');
 const mongoose = require('mongoose');
 const requireLogin = require('../middlewares/requireLogin');
 const requireCredits = require('../middlewares/requireCredits');
@@ -14,6 +17,31 @@ module.exports = app => {
 		res.send('Thanks for voting');
 	});
 
+	/*
+		Handler for SendGrid responses to clicks
+	*/
+	app.post('/api/surveys/webhooks', (req, res) => {
+		// extract surveyId and choice(yes/no)
+		const p = new Path('/api/surveys/:surveyId/:choice');
+
+		const events = _.chain(req.body)
+			// Map over list of events 
+			.map(({ email, url }) => {
+				// Extract url
+				const match = p.test(new URL(url).pathname); //null if nothing extracted
+				if (match) {
+					return {email, 
+						surveyId:match.surveyId, 
+						choice: match.choice};
+				}
+			})
+			// Remove undefined or unique elements
+			.compact()
+			.uniqBy('email', 'surveyId');
+
+		console.log(events);
+		res.send({});
+	});
 	/*
 		Create a new survey and send out a big email
 		Also removes credits when emails sent
