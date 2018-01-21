@@ -9,22 +9,34 @@ const surveyTemplate= require ('../services/emailTemplates/surveyTemplate');
 const Survey = mongoose.model('surveys');
 
 module.exports = app => {
+	/*
+		API request to show all the surveys
+		Includes survey stats and other information
+	*/
+	app.get('/api/surveys/', requireLogin, async (req, res) => {
+		// get surveys that have to do with the user (survey owner/creator)
+		// exclude recipient list
+		const surveys = await Survey.find({ _user: req.user.id })
+			.select({ recipients: false });
+
+		res.send(surveys);
+	});
 
 	/*
 		Response sent when recipient responds
 	*/
-	app.get('/api/surveys/thanks', (req, res) => {
+	app.get('/api/surveys/:surveId/:choice', (req, res) => {
 		res.send('Thanks for voting');
 	});
 
 	/*
-		Handler for SendGrid responses to clicks
+		Handler for SendGrid responses to clicks in the email
 	*/
 	app.post('/api/surveys/webhooks', (req, res) => {
 		// extract surveyId and choice(yes/no)
 		const p = new Path('/api/surveys/:surveyId/:choice');
 
-		const events = _.chain(req.body)
+		_.chain(req.body)
 			// Map over list of events 
 			.map(({ email, url }) => {
 				// Extract url
@@ -37,9 +49,27 @@ module.exports = app => {
 			})
 			// Remove undefined or unique elements
 			.compact()
-			.uniqBy('email', 'surveyId');
+			.uniqBy('email', 'surveyId')
 
-		console.log(events);
+			// async query to mongodb
+			// find elem with _id, email, and responded=false
+			// if found, update their choice, and set responded to true
+			.each(({surveyId, email, choice}) => {
+				Survey.updateOne(
+				{
+					_id: surveyId,
+					recipients: {
+						$elemMatch: { email: email, responded: false}
+					}
+				}, 
+				{
+					$inc: { [choice]: 1 },
+					$set: {'recipients.$.responded': true },
+					lastResponded: Date.now()
+				}).exec();
+			})
+			.value();
+
 		res.send({});
 	});
 	/*
